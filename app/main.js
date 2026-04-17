@@ -20,7 +20,7 @@ async function main() {
 
   const response = await client.chat.completions.create({
     model: "anthropic/claude-haiku-4.5",
-    messages: [{ role: "user", content: prompt }],
+    messages: [{role: "user", content: prompt}],
   });
 
   if (!response.choices || response.choices.length === 0) {
@@ -31,7 +31,7 @@ async function main() {
   console.error("Logs from your program will appear here!");
 
   // TODO: Uncomment the lines below to pass the first stage
-  // console.log(response.choices[0].message.content);
+  console.log(response.choices[0].message.content);
 }
 
 main();
