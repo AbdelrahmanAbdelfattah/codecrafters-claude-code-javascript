@@ -1,5 +1,7 @@
 import OpenAI from "openai";
 
+import fs from "fs";
+
 async function main() {
   const [, , flag, prompt] = process.argv;
   const apiKey = process.env.OPENROUTER_API_KEY;
@@ -47,6 +49,38 @@ async function main() {
     throw new Error("no choices in response");
   }
 
+  // the format of the response when the model calls a tool will look like this:
+  //   {
+  //   "choices": [
+  //     {
+  //       "index": 0,
+  //       "message": {
+  //         "role": "assistant",
+  //         "content": null,
+  //         "tool_calls": [
+  //           {
+  //             "id": "call_abc123",
+  //             "type": "function",
+  //             "function": {
+  //               "name": "Read",
+  //               "arguments": "{\"file_path\": \"/path/to/file.txt\"}"
+  //             }
+  //           }
+  //         ]
+  //       },
+  //       "finish_reason": "tool_calls"
+  //     }
+  //   ]
+  // }
+
+  if (response.choices[0].tool_calls[0]) {
+    const toolCall = response.choices[0].tool_calls[0];
+    const args = JSON.parse(toolCall.function.arguments);
+    const file_Buffer = fs.readFileSync(args.file_path, "utf-8");
+    console.log(file_Buffer);
+  } else {
+    console.log(response.choices[0].message.content);
+  }
   // You can use print statements as follows for debugging, they'll be visible when running tests.
   console.error("Logs from your program will appear here!");
 
