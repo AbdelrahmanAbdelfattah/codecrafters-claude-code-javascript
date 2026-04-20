@@ -20,66 +20,66 @@ async function main() {
     baseURL: baseURL,
   });
 
-  // stage (Advertise the read tool)
-  const response = await client.chat.completions.create({
-    model: "anthropic/claude-haiku-4.5",
-    messages: [{role: "user", content: prompt}],
-    tools: [
-      {
-        type: "function",
-        function: {
-          name: "Read_File",
-          description: "Read and return the contents of a file",
-          parameters: {
-            type: "object",
-            properties: {
-              file_path: {
-                type: "string",
-                description: "The path to the file to read",
-              },
+  // 1. Initialize the messages array outside the loop
+  const messages = [{ role: "user", content: prompt }];
+
+  // 2. Define the tools
+  const tools = [
+    {
+      type: "function",
+      function: {
+        name: "Read_File",
+        description: "Read and return the contents of a file",
+        parameters: {
+          type: "object",
+          properties: {
+            file_path: {
+              type: "string",
+              description: "The path to the file to read",
             },
-            required: ["file_path"],
           },
+          required: ["file_path"],
         },
       },
-    ],
-  });
+    },
+  ];
 
-  if (!response.choices || response.choices.length === 0) {
-    throw new Error("no choices in response");
-  }
+  // 3. Start the agent loop
+  while (true) {
+    const response = await client.chat.completions.create({
+      model: "anthropic/claude-haiku-4.5",
+      messages: messages,
+      tools: tools,
+    });
 
-  // the format of the response when the model calls a tool will look like this:
-  //   {
-  //   "choices": [
-  //     {
-  //       "index": 0,
-  //       "message": {
-  //         "role": "assistant",
-  //         "content": null,
-  //         "tool_calls": [
-  //           {
-  //             "id": "call_abc123",
-  //             "type": "function",
-  //             "function": {
-  //               "name": "Read",
-  //               "arguments": "{\"file_path\": \"/path/to/file.txt\"}"
-  //             }
-  //           }
-  //         ]
-  //       },
-  //       "finish_reason": "tool_calls"
-  //     }
-  //   ]
-  // }
+    if (!response.choices || response.choices.length === 0) {
+      throw new Error("no choices in response");
+    }
 
-  if (response.choices[0].message.tool_calls) {
-    const toolCall = response.choices[0].message.tool_calls[0];
-    const args = JSON.parse(toolCall.function.arguments);
-    const file_Buffer = fs.readFileSync(args.file_path, "utf-8");
-    console.log(file_Buffer);
-  } else {
-    console.log(response.choices[0].message.content);
+    // 4. Always add the assistant's response to the conversation history
+    const message = response.choices[0].message;
+    messages.push(message);
+
+    // 5. Exit Condition: If the model didn't use any tools, it has the final answer
+    if (!message.tool_calls || message.tool_calls.length === 0) {
+      if (message.content) {
+        console.log(message.content); // Print the final answer
+      }
+      break; // Stop the loop
+    }
+
+    // 6. Handle tool execution: Iterate through requested tools
+    for (const toolCall of message.tool_calls) {
+      const args = JSON.parse(toolCall.function.arguments);
+      const fileContent = fs.readFileSync(args.file_path, "utf-8");
+
+      // 7. Push the tool result back into messages (do not print to stdout)
+      messages.push({
+        role: "tool",
+        tool_call_id: toolCall.id,
+        content: fileContent,
+      });
+    }
   }
   // You can use print statements as follows for debugging, they'll be visible when running tests.
   console.error("Logs from your program will appear here!");
