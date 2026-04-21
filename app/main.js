@@ -99,7 +99,8 @@ async function main() {
       else if (toolCall.function.name === "Write_File") {
         const path = args.file_path;
         const content = args.content;
-        fileContent = fs.writeFileSync(path, content);
+        fs.writeFileSync(path, content);
+        fileContent = `Wrote to ${path}`;
       }
 
       // 7. Push the tool result back into messages (do not print to stdout)
