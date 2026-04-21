@@ -42,6 +42,27 @@ async function main() {
         },
       },
     },
+    {
+      "type": "function",
+      "function": {
+        "name": "Write_File",
+        "description": "Write content to a file",
+        "parameters": {
+          "type": "object",
+          "required": ["file_path", "content"],
+          "properties": {
+            "file_path": {
+              "type": "string",
+              "description": "The path of the file to write to"
+            },
+            "content": {
+              "type": "string",
+              "description": "The content to write to the file"
+            }
+          }
+        }
+      }
+    }
   ];
 
   // 3. Start the agent loop
@@ -71,7 +92,15 @@ async function main() {
     // 6. Handle tool execution: Iterate through requested tools
     for (const toolCall of message.tool_calls) {
       const args = JSON.parse(toolCall.function.arguments);
-      const fileContent = fs.readFileSync(args.file_path, "utf-8");
+      let fileContent = "";
+      if (toolCall.function.name === "Read_File") {
+        fileContent = fs.readFileSync(args.file_path, "utf-8");
+      }
+      else if (toolCall.function.name === "Write_File") {
+        const path = args.file_path;
+        const content = args.content;
+        fileContent = fs.writeFileSync(path, content);
+      }
 
       // 7. Push the tool result back into messages (do not print to stdout)
       messages.push({
