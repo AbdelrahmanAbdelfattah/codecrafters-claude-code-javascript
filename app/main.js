@@ -123,7 +123,8 @@ async function main() {
       }
       else if (toolCall.function.name === "Bash") {
         try {
-          const { stdout, stderr } = await execAsync(command);
+
+          const { stdout, stderr } = await execAsync(args.command);
           fileContent = stderr || stdout || "";
         } catch (error) {
           fileContent = error.message;
