@@ -2,6 +2,8 @@ import OpenAI from "openai";
 
 import fs from "fs";
 import { exec } from 'child_process';
+import { promisify } from 'util';
+const execAsync = promisify(exec);
 async function main() {
   const [, , flag, prompt] = process.argv;
   const apiKey = process.env.OPENROUTER_API_KEY;
@@ -120,20 +122,12 @@ async function main() {
         fileContent = `Wrote to ${path}`;
       }
       else if (toolCall.function.name === "Bash") {
-        const command = args.command;
-        const { stdout, stderr } = exec(command, (error, stdout, stderr) => {
-          if (error) {
-            console.error(`Execution Error: ${error.message}`);
-            return;
-          }
-          if (stderr) {
-            console.error(`Standard Error: ${stderr}`);
-            return;
-          }
-        });
-
-        fileContent = stderr ? stderr : stdout;
-
+        try {
+          const { stdout, stderr } = await execAsync(command);
+          fileContent = stderr || stdout || "";
+        } catch (error) {
+          fileContent = error.message;
+        }
       }
 
       // 7. Push the tool result back into messages (do not print to stdout)
@@ -146,9 +140,6 @@ async function main() {
   }
   // You can use print statements as follows for debugging, they'll be visible when running tests.
   console.error("Logs from your program will appear here!");
-
-  // TODO: Uncomment the lines below to pass the first stage
-  //console.log(response.choices[0].message.content);
 }
 
 main();
