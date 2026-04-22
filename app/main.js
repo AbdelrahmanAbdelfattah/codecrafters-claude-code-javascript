@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 
 import fs from "fs";
+const { exec } = require('child_process');
 
 async function main() {
   const [, , flag, prompt] = process.argv;
@@ -62,6 +63,23 @@ async function main() {
           }
         }
       }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "Bash",
+        "description": "Execute a shell command",
+        "parameters": {
+          "type": "object",
+          "required": ["command"],
+          "properties": {
+            "command": {
+              "type": "string",
+              "description": "The command to execute"
+            }
+          }
+        }
+      }
     }
   ];
 
@@ -101,6 +119,22 @@ async function main() {
         const content = args.content;
         fs.writeFileSync(path, content);
         fileContent = `Wrote to ${path}`;
+      }
+      else if (toolCall.function.name === "Bash") {
+        const command = args.command;
+        const { stdout, stderr } = exec(command, (error, stdout, stderr) => {
+          if (error) {
+            console.error(`Execution Error: ${error.message}`);
+            return;
+          }
+          if (stderr) {
+            console.error(`Standard Error: ${stderr}`);
+            return;
+          }
+        });
+
+        fileContent = stderr ? stderr : stdout;
+
       }
 
       // 7. Push the tool result back into messages (do not print to stdout)
